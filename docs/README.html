@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <title>Huerto Hogar — Presentación Técnica</title>
+    <link rel="shortcut icon" href="./favicon.ico" />
+    <link rel="stylesheet" href="./dist/reset.css" />
+    <link rel="stylesheet" href="./dist/reveal.css" />
+    <link rel="stylesheet" href="./dist/theme/white.css" id="theme" />
+    <link rel="stylesheet" href="./css/highlight/base16/zenburn.css" />
+
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides">
+        <section data-markdown data-separator="\r?\n---\r?\n" data-separator-vertical="\r?\n----\r?\n">
+          <textarea data-template>
+            
+
+# 🌿 Huerto Hogar  
+## Documentación Técnica
+
+---
+
+## 📌 Resumen
+
+Huerto Hogar es una aplicación móvil de comercio electrónico para la venta de productos orgánicos y frescos.  
+Ofrece una experiencia moderna y minimalista para explorar productos, gestionar cuentas y comprar de forma segura.
+
+---
+
+## 📚 Tabla de contenido
+
+1. Introducción  
+2. Tecnologías utilizadas  
+3. Arquitectura  
+4. Gestión de datos con Room  
+5. Funcionalidades principales  
+6. Dificultades y aprendizajes  
+7. Conclusiones y mejoras futuras
+
+---
+
+# 🟢 Introducción
+
+**Propósito:**  
+Facilitar la compra de productos orgánicos de productores locales.
+
+**Usuarios objetivo:**  
+Personas interesadas en alimentación saludable y apps simples, claras y rápidas.
+
+---
+
+# 🛠 Tecnologías utilizadas
+
+- **Lenguaje:** Kotlin  
+---
+title: Huerto Hogar — Presentación Técnica
+theme: white
+---
+
+# 🌿 Huerto Hogar
+## Documentación Técnica
+
+---
+
+## 📌 Resumen
+
+Huerto Hogar es una aplicación móvil de comercio electrónico para la venta de productos orgánicos y frescos.  
+Ofrece una experiencia moderna y minimalista para explorar productos, gestionar cuentas y comprar de forma segura.
+
+---
+
+## 📚 Tabla de contenido
+
+1. Introducción  
+2. Tecnologías utilizadas  
+3. Arquitectura  
+4. Gestión de datos con Room  
+5. Funcionalidades principales  
+6. Dificultades y aprendizajes  
+7. Conclusiones y mejoras futuras
+
+---
+
+# 🟢 Introducción
+
+**Propósito:**  
+Facilitar la compra de productos orgánicos de productores locales.
+
+**Usuarios objetivo:**  
+Personas interesadas en alimentación saludable y apps simples, claras y rápidas.
+
+---
+
+# 🛠 Tecnologías utilizadas
+
+- **Lenguaje:** Kotlin  
+- **UI:** Jetpack Compose (Material 3, tema verde personalizado)  
+- **Arquitectura:** MVVM  
+- **Persistencia:** Room  
+- **Dependencias:** Catálogo (`libs.versions.toml`)  
+- **Navegación:** Jetpack Navigation Compose  
+- **Asincronía:** Corrutinas + StateFlow  
+
+---
+
+# 🧱 Arquitectura de la aplicación
+
+Basada en MVVM:
+
+---
+
+## 📂 Modelo
+
+- Entidades y DAOs de Room  
+- Ejemplos:  
+  `User.kt`, `Product.kt`, `AppDatabase.kt`, `UserDao.kt`
+
+---
+
+## 🎨 Vista (UI)
+
+- Composables:  
+  `HomeScreen.kt`, `CartScreen.kt`, `ProfileScreen.kt`
+
+---
+
+## 🧠 ViewModel
+
+- Lógica de UI  
+- Validaciones  
+- Comunicación con Room  
+- Ejemplos:  
+  `HomeViewModel.kt`, `CartViewModel.kt`
+
+---
+
+## Principios aplicados
+
+- Aware del ciclo de vida  
+- Reactividad con StateFlow  
+- Separación clara de responsabilidades  
+
+---
+
+# 🗄 Gestión de datos con Room
+
+Usado para persistencia local (usuarios, carrito, productos).  
+Integra SQL seguro + Kotlin coroutines + Flow.
+
+---
+
+## Ejemplo de entidad `User`
+
+```kotlin
+@Entity(tableName = "users")
+data class User(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val name: String,
+    val email: String,
+    val address: String,
+    val phone: String,
+    val password: String
+)
+```
+
+```kotlin
+@Dao
+interface UserDao {
+    @Insert suspend fun insert(user: User)
+    @Update suspend fun update(user: User)
+
+    @Query("SELECT * FROM users WHERE email = :email")
+    suspend fun getUserByEmail(email: String): User?
+}
+```
+
+---
+
+### Beneficios de Room
+
+- Verificación de SQL en compilación
+- Menos boilerplate
+- Compatible con Flow
+- Rendimiento y seguridad
+
+---
+
+### 🧩 Funcionalidades principales
+
+- Catálogo de productos
+- Búsqueda en tiempo real
+- Detalles de producto
+- Carrito con totales
+- Cuentas de usuario (registro/login/perfil)
+- Flujo de compra simulada
+
+---
+
+### 🧪 Dificultades y aprendizajes
+
+- Gradle: Alineación de versiones (Kotlin + KSP + Room)
+- Animaciones: Uso correcto de `animateItemPlacement()`
+- Reactividad: StateFlow simplifica mucho la UI
+- Room + Flow: Actualización instantánea de datos
+
+---
+
+### 🧭 Lecciones clave
+
+- MVVM mejora testabilidad
+- Compose reduce código repetitivo
+- La arquitectura escalable facilita nuevas funciones
+
+---
+
+### 🚀 Conclusiones y mejoras futuras
+
+- Cargar imágenes desde servidor
+- Persistir sesión con DataStore
+- Backend real (Firebase o propio)
+- Notificaciones push
+- Mejorar animaciones y pantallas
+
+          </textarea>
+        </section>
+      </div>
+    </div>
+
+    <script src="./dist/reveal.js"></script>
+
+    <script src="./mermaid/dist/mermaid.min.js"></script>
+
+    <script src="./plugin/markdown/markdown.js"></script>
+    <script src="./plugin/highlight/highlight.js"></script>
+    <script src="./plugin/zoom/zoom.js"></script>
+    <script src="./plugin/notes/notes.js"></script>
+    <script src="./plugin/math/math.js"></script>
+    <script>
+      function extend() {
+        var target = {};
+        for (var i = 0; i < arguments.length; i++) {
+          var source = arguments[i];
+          for (var key in source) {
+            if (source.hasOwnProperty(key)) {
+              target[key] = source[key];
+            }
+          }
+        }
+        return target;
+      }
+
+      // default options to init reveal.js
+      var defaultOptions = {
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+        transition: 'default', // none/fade/slide/convex/concave/zoom
+        slideNumber: true,
+        highlight: {
+          highlightOnLoad: false
+        },
+        plugins: [
+          RevealMarkdown,
+          RevealHighlight,
+          RevealZoom,
+          RevealNotes,
+          RevealMath
+        ]
+      };
+
+      // options from URL query string
+      var queryOptions = Reveal().getQueryHash() || {};
+
+      var options = extend(defaultOptions, {"_":["README.md"],"static":"docs"}, queryOptions);
+    </script>
+
+
+    <script>
+      Reveal.initialize(options);
+      Reveal.addEventListener('ready', function (event) {
+        const blocks = Reveal.getRevealElement().querySelectorAll('pre code:not(.mermaid)');
+        const hlp = Reveal.getPlugin('highlight');
+        blocks.forEach(hlp.highlightBlock);
+      });
+    </script>
+
+    <script>
+      const mermaidOptions = extend({ startOnLoad: false }, {});
+      mermaid.startOnLoad = false;
+      mermaid.initialize(mermaidOptions);
+      const cb = function (event) {
+        mermaid.init(mermaidOptions, '.stack.present > .present pre code.mermaid');
+        mermaid.init(mermaidOptions, '.slides > .present:not(.stack) pre code.mermaid');
+      }
+      Reveal.addEventListener('ready', cb);
+      Reveal.addEventListener('slidetransitionend', cb);
+    </script>
+  </body>
+</html>
