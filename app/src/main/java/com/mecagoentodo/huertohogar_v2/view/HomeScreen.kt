@@ -9,13 +9,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddShoppingCart
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Spa
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,57 +24,72 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil.compose.AsyncImage
+import com.mecagoentodo.huertohogar_v2.R
 import com.mecagoentodo.huertohogar_v2.model.Product
 import com.mecagoentodo.huertohogar_v2.viewmodel.CartViewModel
 import com.mecagoentodo.huertohogar_v2.viewmodel.HomeViewModel
+import com.mecagoentodo.huertohogar_v2.viewmodel.ProductUiState
 import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import java.util.Locale
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(homeViewModel: HomeViewModel = viewModel(), cartViewModel: CartViewModel) {
-    val products by homeViewModel.products.collectAsState()
-    val searchText by homeViewModel.searchText.collectAsState()
+fun HomeScreen(homeViewModel: HomeViewModel, cartViewModel: CartViewModel) {
+    val uiState by homeViewModel.uiState.collectAsState()
+    
     var selectedProduct by remember { mutableStateOf<Product?>(null) }
-    var shakingProductId by remember { mutableStateOf<Int?>(null) }
+    var shakingProductId by remember { mutableStateOf<String?>(null) } 
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    // --- Efecto para recargar los productos al volver a la pantalla ---
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                homeViewModel.loadProducts()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) }
     ) { padding ->
         Column(modifier = Modifier.padding(padding)) {
-            OutlinedTextField(
-                value = searchText,
-                onValueChange = homeViewModel::onSearchTextChange,
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                label = { Text("Buscar producto...") },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
-                shape = CircleShape,
-                singleLine = true
-            )
-
-            val groupedProducts = products.groupBy { it.category }
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                groupedProducts.forEach { (category, productsInCategory) ->
-                    item(key = category) {
-                        Text(
-                            text = category,
-                            style = MaterialTheme.typography.titleMedium,
-                            modifier = Modifier.padding(top = 16.dp, bottom = 8.dp).animateItemPlacement()
-                        )
+            when (val state = uiState) {
+                is ProductUiState.Loading -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
                     }
-                    items(productsInCategory, key = { it.id }) { product ->
-                        Box(modifier = Modifier.animateItemPlacement()) {
+                }
+                is ProductUiState.Success -> {
+                    CategoryFilter(
+                        categories = state.categories,
+                        selectedCategory = state.selectedCategory,
+                        onCategorySelected = { homeViewModel.selectCategory(it) }
+                    )
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        items(state.products, key = { it.id }) { product ->
                             ProductCard(
                                 product = product,
                                 isShaking = product.id == shakingProductId,
@@ -90,15 +106,59 @@ fun HomeScreen(homeViewModel: HomeViewModel = viewModel(), cartViewModel: CartVi
                         }
                     }
                 }
+                is ProductUiState.Error -> {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(state.message)
+                    }
+                }
             }
         }
     }
     
     AnimatedVisibility(visible = selectedProduct != null, enter = fadeIn(), exit = fadeOut()) {
         if (selectedProduct != null) {
-            ProductDetailsModal(product = selectedProduct!!, onDismiss = { selectedProduct = null })
+            ProductDetailsModal(
+                product = selectedProduct!!, 
+                onDismiss = { selectedProduct = null },
+                onAddToCart = {
+                    cartViewModel.addToCart(selectedProduct!!)
+                    scope.launch {
+                        snackbarHostState.showSnackbar("¡${selectedProduct!!.name} añadido al carrito!")
+                    }
+                }
+            )
         }
     }
+}
+
+@Composable
+fun CategoryFilter(categories: List<String>, selectedCategory: String, onCategorySelected: (String) -> Unit) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(categories) { category ->
+            FilterChip(
+                label = category,
+                isSelected = category == selectedCategory,
+                onClick = { onCategorySelected(category) }
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterChip(label: String, isSelected: Boolean, onClick: () -> Unit) {
+    ElevatedFilterChip(
+        selected = isSelected,
+        onClick = onClick,
+        label = { Text(label) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.secondary,
+            selectedLabelColor = MaterialTheme.colorScheme.onSecondary
+        )
+    )
 }
 
 @Composable
@@ -119,13 +179,7 @@ fun ProductCard(
                 targetValue = 0f, 
                 animationSpec = keyframes {
                     durationMillis = 500
-                    -10f at 50
-                    10f at 100
-                    -10f at 150
-                    10f at 200
-                    -5f at 250
-                    5f at 300
-                    0f at 350
+                    -10f at 50; 10f at 100; -10f at 150; 10f at 200; -5f at 250; 5f at 300; 0f at 350
                 }
             )
             onShakeComplete()
@@ -143,12 +197,14 @@ fun ProductCard(
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.secondaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Outlined.Spa, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-            }
+            coil.compose.AsyncImage(
+                model = product.fullImageUrl,
+                contentDescription = product.name,
+                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(id = R.drawable.ic_launcher_background), // Opcional
+                error = painterResource(id = R.drawable.ic_launcher_background) // Opcional
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -167,25 +223,49 @@ fun ProductCard(
 }
 
 @Composable
-fun ProductDetailsModal(product: Product, onDismiss: () -> Unit) {
-    val format = NumberFormat.getCurrencyInstance(Locale("es", "CL"))
-    format.maximumFractionDigits = 0
-
+fun ProductDetailsModal(product: Product, onDismiss: () -> Unit, onAddToCart: () -> Unit) {
     Dialog(onDismissRequest = onDismiss) {
         Card(shape = RoundedCornerShape(16.dp)) {
-            Column(modifier = Modifier.padding(24.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                     Text("${product.code} - ${product.name}", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
-                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Default.Close, contentDescription = "Cerrar")
+            Column {
+                coil.compose.AsyncImage(
+                    model = product.fullImageUrl,
+                    contentDescription = product.name,
+                    modifier = Modifier.fillMaxWidth().height(180.dp),
+                    contentScale = ContentScale.Crop,
+                    placeholder = painterResource(id = R.drawable.ic_launcher_background), // Opcional
+                    error = painterResource(id = R.drawable.ic_launcher_background) // Opcional
+                )
+
+                Column(modifier = Modifier.padding(24.dp)) {
+                    Text(product.name, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                    Text(product.code, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                        InfoChip(icon = Icons.Default.AttachMoney, text = "${NumberFormat.getCurrencyInstance(Locale("es", "CL")).apply { maximumFractionDigits = 0 }.format(product.price)} / ${product.unit}")
+                        InfoChip(icon = Icons.Outlined.Inventory2, text = "${product.stock} disponibles")
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(product.description, style = MaterialTheme.typography.bodyLarge)
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(onClick = onAddToCart, modifier = Modifier.fillMaxWidth().height(50.dp)) {
+                        Icon(Icons.Default.AddShoppingCart, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+                        Text("Agregar al Carrito")
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Precio: ${format.format(product.price)} por ${product.unit}", style = MaterialTheme.typography.titleMedium)
-                Text("Stock: ${product.stock} ${product.unit}s", style = MaterialTheme.typography.bodyMedium)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(product.description, style = MaterialTheme.typography.bodyLarge)
             }
         }
+    }
+}
+
+@Composable
+private fun InfoChip(icon: ImageVector, text: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, contentDescription = null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.secondary)
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(text, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
     }
 }

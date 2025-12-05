@@ -30,59 +30,80 @@ fun CheckoutScreen(userViewModel: UserViewModel, cartViewModel: CartViewModel, n
 
     Scaffold {
         Column(modifier = Modifier.fillMaxSize().padding(it).padding(16.dp)) {
-            // --- Resumen de la Boleta ---
-            Text("Resumen de la Compra", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
-            val subtotal = cartItems.sumOf { item -> item.price * item.quantity }
-            val iva = subtotal * 0.19
-            val total = subtotal + iva
-            val format = NumberFormat.getCurrencyInstance(Locale("es", "CL"))
-            format.maximumFractionDigits = 0
-            
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    SummaryRow(label = "Subtotal", amount = format.format(subtotal))
-                    SummaryRow(label = "IVA (19%)", amount = format.format(iva))
-                    Divider(modifier = Modifier.padding(vertical = 8.dp))
-                    SummaryRow(label = "Total a Pagar", amount = format.format(total), isTotal = true)
+            LazyColumn(modifier = Modifier.weight(1f)) {
+                // --- Resumen de Productos ---
+                item {
+                    Text("Resumen de la Compra", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            cartItems.forEach {
+                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("${it.productName} x${it.quantity}")
+                                    val format = NumberFormat.getCurrencyInstance(Locale("es", "CL"))
+                                    format.maximumFractionDigits = 0
+                                    Text(format.format(it.price * it.quantity))
+                                }
+                                Spacer(modifier = Modifier.height(8.dp))
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
+                // --- Desglose de Precios ---
+                item {
+                    val subtotal = cartItems.sumOf { item -> item.price * item.quantity }
+                    val iva = subtotal * 0.19
+                    val total = subtotal + iva
+                    val format = NumberFormat.getCurrencyInstance(Locale("es", "CL"))
+                    format.maximumFractionDigits = 0
 
-            // --- Selección de Dirección ---
-            Text("Dirección de Envío", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(16.dp))
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = usePrimaryAddress, onClick = { usePrimaryAddress = true })
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Column {
-                        Text("Usar mi dirección guardada", style = MaterialTheme.typography.bodyLarge)
-                        Text(loggedInUser!!.address, style = MaterialTheme.typography.bodyMedium)
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            SummaryRow(label = "Subtotal", amount = format.format(subtotal))
+                            SummaryRow(label = "IVA (19%)", amount = format.format(iva))
+                            Divider(modifier = Modifier.padding(vertical = 8.dp))
+                            SummaryRow(label = "Total a Pagar", amount = format.format(total), isTotal = true)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+
+                // --- Selección de Dirección ---
+                item {
+                    Text("Dirección de Envío", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            RadioButton(selected = usePrimaryAddress, onClick = { usePrimaryAddress = true })
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text("Usar mi dirección guardada", style = MaterialTheme.typography.bodyLarge)
+                                Text(loggedInUser!!.address, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Card(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                RadioButton(selected = !usePrimaryAddress, onClick = { usePrimaryAddress = false })
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Usar otra dirección", style = MaterialTheme.typography.bodyLarge)
+                            }
+                            if (!usePrimaryAddress) {
+                                OutlinedTextField(value = alternativeAddress, onValueChange = { alternativeAddress = it }, label = { Text("Nueva dirección de envío") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+                            }
+                        }
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            Card(modifier = Modifier.fillMaxWidth()) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(selected = !usePrimaryAddress, onClick = { usePrimaryAddress = false })
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Usar otra dirección", style = MaterialTheme.typography.bodyLarge)
-                    }
-                    if (!usePrimaryAddress) {
-                        OutlinedTextField(value = alternativeAddress, onValueChange = { alternativeAddress = it }, label = { Text("Nueva dirección de envío") }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
 
             // --- Botón de Pagar Ahora ---
             Button(
                 onClick = { showConfirmationDialog = true },
-                modifier = Modifier.fillMaxWidth().height(50.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp).padding(top = 16.dp),
                 enabled = usePrimaryAddress || alternativeAddress.isNotBlank()
             ) {
                 Text("Pagar Ahora")
@@ -100,7 +121,8 @@ fun CheckoutScreen(userViewModel: UserViewModel, cartViewModel: CartViewModel, n
                 TextButton(
                     onClick = {
                         showConfirmationDialog = false
-                        cartViewModel.checkout()
+                        val shippingAddress = if (usePrimaryAddress) loggedInUser!!.address else alternativeAddress
+                        cartViewModel.checkout(loggedInUser!!.id, shippingAddress)
                         navController.navigate(Screen.Home.route) {
                             popUpTo(navController.graph.startDestinationId)
                             launchSingleTop = true

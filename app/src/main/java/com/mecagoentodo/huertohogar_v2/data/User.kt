@@ -1,14 +1,12 @@
 package com.mecagoentodo.huertohogar_v2.data
 
-import androidx.room.Entity
-import androidx.room.PrimaryKey
-
-@Entity(tableName = "users")
+// Este es nuestro modelo de dominio. Representa a un usuario tal como
+// lo devuelve la API de PocketBase (sin campos sensibles como la contraseña).
 data class User(
-    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val id: String,
     val name: String,
     val email: String,
     val address: String,
     val phone: String,
-    val password: String
+    val isAdmin: Boolean = false
 )

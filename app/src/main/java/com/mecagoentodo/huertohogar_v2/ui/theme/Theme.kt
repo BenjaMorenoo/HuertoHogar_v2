@@ -2,20 +2,22 @@ package com.mecagoentodo.huertohogar_v2.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-
-private val DarkColorScheme = darkColorScheme(
-    primary = Green_dark,
-    secondary = Green_light,
-    background = White_dark
-)
+import androidx.compose.ui.graphics.Color
 
 private val LightColorScheme = lightColorScheme(
-    primary = Green_light,
-    secondary = Green_dark,
-    background = White_light
+    primary = VerdeEsmeralda,
+    secondary = MarronClaro,
+    tertiary = AmarilloMostaza,
+    background = BlancoSuave,
+    surface = BlancoSuave,
+    onPrimary = Color.White,
+    onSecondary = Color.White,
+    onTertiary = Color.White,
+    onBackground = GrisOscuro,
+    onSurface = GrisOscuro,
+    onSurfaceVariant = GrisMedio
 )
 
 @Composable
@@ -23,11 +25,8 @@ fun HuertoHogar_v2Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) {
-        DarkColorScheme
-    } else {
-        LightColorScheme
-    }
+    // Por ahora, forzamos el tema claro para mantener la consistencia con la paleta definida.
+    val colorScheme = LightColorScheme
 
     MaterialTheme(
         colorScheme = colorScheme,

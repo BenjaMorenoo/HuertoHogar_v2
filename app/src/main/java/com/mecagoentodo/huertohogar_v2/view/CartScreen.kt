@@ -7,16 +7,21 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.outlined.Spa
+import androidx.compose.material.icons.outlined.DeleteSweep
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.mecagoentodo.huertohogar_v2.R
 import com.mecagoentodo.huertohogar_v2.data.CartItem
 import com.mecagoentodo.huertohogar_v2.viewmodel.CartViewModel
 import com.mecagoentodo.huertohogar_v2.viewmodel.CheckoutState
@@ -30,6 +35,7 @@ fun CartScreen(cartViewModel: CartViewModel, userViewModel: UserViewModel, navCo
     val cartItems by cartViewModel.cartItems.collectAsState()
     val checkoutState by cartViewModel.checkoutState.collectAsState()
     val loggedInUser by userViewModel.loggedInUser.collectAsState()
+    var showClearCartDialog by remember { mutableStateOf(false) }
 
     // --- Cálculos de Precios ---
     val subtotal = cartItems.sumOf { it.price * it.quantity }
@@ -70,8 +76,15 @@ fun CartScreen(cartViewModel: CartViewModel, userViewModel: UserViewModel, navCo
                         .padding(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        SummaryRow(label = "Subtotal", amount = format.format(subtotal))
+                        // --- Botón de Vaciar Carrito ---
+                        TextButton(onClick = { showClearCartDialog = true }, modifier = Modifier.align(Alignment.End)) {
+                            Icon(Icons.Outlined.DeleteSweep, contentDescription = "Vaciar Carrito", modifier = Modifier.size(ButtonDefaults.IconSize))
+                            Spacer(modifier = Modifier.size(ButtonDefaults.IconSpacing))
+                            Text("Vaciar Carrito")
+                        }
                         Spacer(modifier = Modifier.height(8.dp))
+                        
+                        SummaryRow(label = "Subtotal", amount = format.format(subtotal))
                         SummaryRow(label = "IVA (19%)", amount = format.format(iva))
                         Divider(modifier = Modifier.padding(vertical = 16.dp))
                         Row(
@@ -109,6 +122,30 @@ fun CartScreen(cartViewModel: CartViewModel, userViewModel: UserViewModel, navCo
         }
     }
 
+    // --- Diálogo de Confirmación para Vaciar Carrito ---
+    if (showClearCartDialog) {
+        AlertDialog(
+            onDismissRequest = { showClearCartDialog = false },
+            title = { Text("Vaciar Carrito") },
+            text = { Text("¿Estás seguro de que quieres eliminar todos los productos del carrito?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        cartViewModel.clearCart()
+                        showClearCartDialog = false
+                    }
+                ) {
+                    Text("Aceptar")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showClearCartDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
     LaunchedEffect(checkoutState) {
         if (checkoutState is CheckoutState.Success) {
             scope.launch {
@@ -144,15 +181,14 @@ fun CartItemCard(item: CartItem, cartViewModel: CartViewModel) {
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .size(64.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(MaterialTheme.colorScheme.secondaryContainer),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(Icons.Outlined.Spa, contentDescription = null, tint = MaterialTheme.colorScheme.onSecondaryContainer)
-            }
+            AsyncImage(
+                model = item.fullImageUrl,
+                contentDescription = item.productName,
+                modifier = Modifier.size(64.dp).clip(RoundedCornerShape(12.dp)),
+                contentScale = ContentScale.Crop,
+                placeholder = painterResource(id = R.drawable.ic_launcher_background), // Opcional
+                error = painterResource(id = R.drawable.ic_launcher_background) // Opcional
+            )
 
             Spacer(modifier = Modifier.width(16.dp))
 
@@ -175,6 +211,11 @@ fun CartItemCard(item: CartItem, cartViewModel: CartViewModel) {
                 IconButton(onClick = { cartViewModel.increaseQuantity(item) }) {
                     Icon(Icons.Default.Add, contentDescription = "Aumentar cantidad")
                 }
+            }
+
+            // --- Botón de Eliminar Producto ---
+            IconButton(onClick = { cartViewModel.removeFromCart(item) }) {
+                Icon(Icons.Default.Delete, contentDescription = "Eliminar producto", tint = MaterialTheme.colorScheme.error)
             }
         }
     }
